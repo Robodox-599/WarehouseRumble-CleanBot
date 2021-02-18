@@ -12,6 +12,9 @@
 #define rumble      false
 PS2X ps2x; // create PS2 Controller Class
 
+#define COMPMODE_AUTO 1
+#define COMPMODE_TELEOP 2
+
 int error = 0;
 byte type = 0;
 
@@ -65,9 +68,35 @@ void setup()
   }
 }
 
+int competitionMode = COMPMODE_TELEOP;
+int timer = 0;
+
 void loop() {
-  if (error == 1) { return; } //skip loop if no controller found
-  if (type == 2) { return; } //Guitar Hero Controller
+
+  switch (competitionMode)
+  {
+    case COMPMODE_AUTO:
+      //Serial.print('*');
+      doAutonomousLoop();
+      break;
+
+    case COMPMODE_TELEOP:
+      //Serial.print('-');
+      doTeleopLoop();
+      break;
+  }
+
+  delay(20);
+}
+
+void doTeleopLoop()
+{
+  if (error == 1) {
+    return;  //skip loop if no controller found
+  }
+  if (type == 2) {
+    return;  //Guitar Hero Controller
+  }
 
   // We have a DualShock Controller that is responding
   ps2x.read_gamepad(); //read controller and set no vibrate
@@ -81,43 +110,51 @@ void loop() {
   //  Serial.print(", ");
   //  Serial.print(motorRR->getEncoderPosition());
   //  Serial.println();
-  
-  if (ps2x.Button(PSB_L1) || ps2x.Button(PSB_R1)) {
+
+  if (ps2x.Button(PSB_L1) || ps2x.Button(PSB_R1))
+  {
     int LY = ps2x.Analog(PSS_LY);
     int LX = ps2x.Analog(PSS_LX);
     int RX = ps2x.Analog(PSS_RX);
-    float forwardNormalized = (float)(-LY + 128) / 127.f;
 
-    forwardNormalized = constrain( forwardNormalized, -1.f, 1.f );
-    float multiplier = (ps2x.Button(PSB_L1) && ps2x.Button(PSB_R1)) ? 255.f : 80.f;
-    int forward = (int)(pow(forwardNormalized, 2.0) * multiplier);
+    driveChassis(LY, LX, RX);
+  }
+}
 
-    // Preserve the direction of movement.
-    if ( forwardNormalized < 0 ) {
-      forward = -forward;
-    }
+void doAutonomousLoop()
+{
+  // turn left
+  driveChassis(0, 255, 0);
 
-    int right = -RX + 127;
-    int ccwTurn = (LX - 127) / 2;
-
-    motorLF->speed(forward + ccwTurn - right);
-    motorRF->speed(forward - ccwTurn + right);
-    motorLR->speed(forward - ccwTurn - right);
-    motorRR->speed(-(forward + ccwTurn + right));
-  } else {
-    // If there's motor power, try to hard-stop briefly.
-    if ( motorLF->getSpeed() != 0
-         || motorRF->getSpeed() != 0
-         || motorLR->getSpeed() != 0
-         || motorRR->getSpeed() != 0 )
-    {
-      motorLF->hardStop(); motorRF->hardStop();
-      motorLR->hardStop(); motorRR->hardStop();
-      delay(500);
-      motorLF->speed(0); motorRF->speed(0);
-      motorLR->speed(0); motorRR->speed(0);
-    }
+    // wait until encoders > 1000
+  while (motorLF->getEncoderPosition() < 1000)
+  {
+    ; // This page left intentionally blank :^)
   }
 
-  delay(20);
+  // Stop Robot
+  driveChassis(0,0,0);
+
+}
+
+void driveChassis(int forRev, int turn, int slide)
+{
+  float forwardNormalized = (float)(-forRev + 128) / 127.f;
+
+  forwardNormalized = constrain( forwardNormalized, -1.f, 1.f );
+  float multiplier = (ps2x.Button(PSB_L1) && ps2x.Button(PSB_R1)) ? 255.f : 80.f;
+  int forward = (int)(pow(forwardNormalized, 2.0) * multiplier);
+
+  // Preserve the direction of movement.
+  if ( forwardNormalized < 0 ) {
+    forward = -forward;
+  }
+
+  int right = -slide + 127;
+  int ccwTurn = (turn - 127) / 2;
+
+  motorLF->speed(forward + ccwTurn - right);
+  motorRF->speed(forward - ccwTurn + right);
+  motorLR->speed(forward - ccwTurn - right);
+  motorRR->speed(-(forward + ccwTurn + right));
 }

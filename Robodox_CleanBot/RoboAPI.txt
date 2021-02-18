@@ -1,0 +1,69 @@
+
+Motor Control (class name: SPDMotor)
+	Constructor: SPDMotor
+		Parameters:
+			int encoderA - Arduino Pin that Encoder A is wired to
+			int encoderB - Arduino Pin that Encoder B is wired to
+			bool encoderReversed - true/false makes the encoders vales run backwards
+			int motorPWM - Arduino Pin to control motor power
+			int motorDir1 - Arduino Pin to control motor Direction
+			int motorDir2 - Arduino Pin to control motor Direction(also)
+	speed
+		Returns nothing (void)
+		Parameters:
+			int pwm - Controls motor power (value range: -255 (full backwards) to +255 (full forward))
+	hardStop - Makes the motor stop, like brakes
+		Returns nothing (void)
+		Parameters: none
+	getSpeed
+		Returns the last motor speed set with speed()
+		Parameters: none
+	getEncoderPosition
+		Returns (long!) The number of encoder clicks since the program started
+		Parameters: none
+
+// ///////////////////////////////////////////////////////////////
+		
+Controller Read (class name: PS2X)
+	boolean Button(uint16_t);
+		Returns: TRUE if button is being pressed
+		Parameters: bit value of the button in question (get these in PS2X_lib.h in Documents/Arduino/libraries/ps2x_lib)
+
+	boolean NewButtonState(); // Returns true if any button changed status (pressed OR released) since last read
+
+	boolean NewButtonState(unsigned int);    //will be TRUE if button was JUST pressed OR released (get these in PS2X_lib.h in Documents/Arduino/libraries/ps2x_lib)
+
+	boolean ButtonPressed(unsigned int);     //will be TRUE if button was JUST pressed (get these in PS2X_lib.h in Documents/Arduino/libraries/ps2x_lib)
+
+	boolean ButtonReleased(unsigned int);    //will be TRUE if button was JUST released  (get these in PS2X_lib.h in Documents/Arduino/libraries/ps2x_lib)
+
+	void read_gamepad(); // Reads all the gamepad stuff into the buttons variable, saving the previous state in last_buttons
+
+	byte Analog(byte); // Reads the Analog values (thumbsticks)
+
+	
+// ///////////////////////////////
+// Uncommon stuff for reference
+// ///////////////////////////////
+
+	unsigned int ButtonDataByte(); // Just the RAW button values
+
+	boolean  read_gamepad(boolean, byte); // More detailed version, should need unless you're doing rumble
+
+	byte readType(); // Returns a number corresponding to the type of controller (Dual Shock, Guitar Hero, etc)
+
+	byte config_gamepad(uint8_t, uint8_t, uint8_t, uint8_t);  // Initial setup of pins and stuff to talk to the gamepad
+
+	byte config_gamepad(uint8_t, uint8_t, uint8_t, uint8_t, bool, bool);   // More detailed initial setup of pins and stuff to talk to the gamepad
+
+	void enableRumble();  // Enables rumble
+
+	bool enablePressures(); // Enables Pressures
+
+	void reconfig_gamepad();  // Reconfigures gamepad?
+
+
+
+
+
+
