@@ -39,7 +39,7 @@ Controller Read (class name: PS2X)
 
 	void read_gamepad(); // Reads all the gamepad stuff into the buttons variable, saving the previous state in last_buttons
 
-	byte Analog(byte); // Reads the Analog values (thumbsticks)
+	byte Analog(byte); // Reads the Analog values (thumbsticks) return value ranges from 0 - 255 with 127/128 being center-stick
 
 	
 // ///////////////////////////////

@@ -12,6 +12,7 @@
 #define rumble      false
 PS2X ps2x; // create PS2 Controller Class
 
+#define COMPMODE_STANDBY 0
 #define COMPMODE_AUTO 1
 #define COMPMODE_TELEOP 2
 
@@ -68,21 +69,30 @@ void setup()
   }
 }
 
-int competitionMode = COMPMODE_TELEOP;
+int competitionMode = COMPMODE_STANDBY;
 int timer = 0;
 
 void loop() {
 
   switch (competitionMode)
   {
+    case COMPMODE_STANDBY:
+      ps2x.read_gamepad();
+
+      if(ps2x.Button(PSB_START)) { Serial.println("Going to Auto Mode"); competitionMode = COMPMODE_AUTO;}
+    break;
+    
     case COMPMODE_AUTO:
-      //Serial.print('*');
       doAutonomousLoop();
+
+      // if(timer > 30 seconds) {competitionMode = COMPMODE_TELEOP;}
+
       break;
 
     case COMPMODE_TELEOP:
-      //Serial.print('-');
       doTeleopLoop();
+
+      // if (timer > gametime) {competitionMode = COMPMODE_STANDBY;}
       break;
   }
 
@@ -117,29 +127,35 @@ void doTeleopLoop()
     int LX = ps2x.Analog(PSS_LX);
     int RX = ps2x.Analog(PSS_RX);
 
-    driveChassis(LY, LX, RX);
+    driveChassisJoystick(LY, LX, RX);
   }
 }
 
 void doAutonomousLoop()
 {
-  // turn left
-  driveChassis(0, 255, 0);
+  driveChassis(0, 0, 255);
+  delay(5000);
 
-    // wait until encoders > 1000
-  while (motorLF->getEncoderPosition() < 1000)
-  {
-    ; // This page left intentionally blank :^)
-  }
-
-  // Stop Robot
   driveChassis(0,0,0);
+  delay(2000);
+
+  driveChassis(0, 0, -255);
+  delay(5000);
+  
+  driveChassis(0,0,0);
+  delay(2000);
 
 }
 
+void driveChassisJoystick(int forRev, int turn, int slide)
+{
+  driveChassis((forRev * 2)-255, (turn * 2)-255, (slide * 2)-255); 
+}
+
+
 void driveChassis(int forRev, int turn, int slide)
 {
-  float forwardNormalized = (float)(-forRev + 128) / 127.f;
+  float forwardNormalized = (float)(forRev/255.f);
 
   forwardNormalized = constrain( forwardNormalized, -1.f, 1.f );
   float multiplier = (ps2x.Button(PSB_L1) && ps2x.Button(PSB_R1)) ? 255.f : 80.f;
@@ -150,11 +166,23 @@ void driveChassis(int forRev, int turn, int slide)
     forward = -forward;
   }
 
-  int right = -slide + 127;
-  int ccwTurn = (turn - 127) / 2;
+  int right = -slide / 2;
+  int ccwTurn = (turn / 4);
 
   motorLF->speed(forward + ccwTurn - right);
   motorRF->speed(forward - ccwTurn + right);
   motorLR->speed(forward - ccwTurn - right);
   motorRR->speed(-(forward + ccwTurn + right));
+
+//  Serial.print(motorLF->getSpeed());
+//  Serial.print(',');
+//  Serial.print(motorRF->getSpeed());
+//  Serial.print(',');
+//  Serial.print(motorLR->getSpeed());
+//  Serial.print(',');
+//  Serial.print(motorRR->getSpeed());
+//  Serial.println();
+
+
+  
 }
