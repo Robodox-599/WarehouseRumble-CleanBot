@@ -16,6 +16,9 @@ PS2X ps2x; // create PS2 Controller Class
 #define COMPMODE_AUTO 1
 #define COMPMODE_TELEOP 2
 
+#define TIMER_AUTONOMOUS_MS 5000
+#define TIMER_TELEOP_MS 10000
+
 int error = 0;
 byte type = 0;
 
@@ -28,15 +31,17 @@ SPDMotor *motorRR = new SPDMotor(2, A1, false, 5, A4, A5); // <- NOTE: Motor Dir
 
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(57600);
   delay(300) ;//added delay to give wireless ps2 module some time to startup, before configuring it
   setupController();
 
-  driveChassis(0,0,0); 
+  driveChassis(0, 0, 0);
+
+  Serial.println("Going to Standby Mode");
 }
 
 int competitionMode = COMPMODE_STANDBY;
-int timer = 0;
+unsigned long timerStart = millis();
 
 void loop() {
 
@@ -45,20 +50,31 @@ void loop() {
     case COMPMODE_STANDBY:
       ps2x.read_gamepad();
 
-      if(ps2x.Button(PSB_START)) { Serial.println("Going to Auto Mode"); competitionMode = COMPMODE_AUTO;}
-    break;
-    
+      if (ps2x.Button(PSB_START)) 
+      {
+        Serial.println("Going to Auto Mode");
+        competitionMode = COMPMODE_AUTO;
+        timerStart = millis();
+      }
+      break;
+
     case COMPMODE_AUTO:
       doAutonomousLoop();
 
-      // if(timer > 30 seconds) {competitionMode = COMPMODE_TELEOP;}
-
+      if (millis() > (timerStart + TIMER_AUTONOMOUS_MS)) {
+        Serial.println("Going to Teleop Mode");
+        competitionMode = COMPMODE_TELEOP;
+        timerStart = millis();
+      }
       break;
 
     case COMPMODE_TELEOP:
       doTeleopLoop();
 
-      // if (timer > gametime) {competitionMode = COMPMODE_STANDBY;}
+      if (millis() > (timerStart + TIMER_TELEOP_MS)) {
+        Serial.println("Match over, going to Standby");
+        competitionMode = COMPMODE_STANDBY;
+      }
       break;
   }
 
@@ -99,29 +115,29 @@ void doTeleopLoop()
 
 void doAutonomousLoop()
 {
-  driveChassis(0, 0, 255);
-  delay(5000);
-
-  driveChassis(0,0,0);
-  delay(2000);
-
-  driveChassis(0, 0, -255);
-  delay(5000);
-  
-  driveChassis(0,0,0);
-  delay(2000);
+//  driveChassis(0, 0, 255);
+//  delay(5000);
+//
+//  driveChassis(0, 0, 0);
+//  delay(2000);
+//
+//  driveChassis(0, 0, -255);
+//  delay(5000);
+//
+//  driveChassis(0, 0, 0);
+//  delay(2000);
 
 }
 
 void driveChassisJoystick(int forRev, int turn, int slide)
 {
-  driveChassis((forRev * 2)-255, (turn * 2)-255, (slide * 2)-255); 
+  driveChassis((forRev * 2) - 255, (turn * 2) - 255, (slide * 2) - 255);
 }
 
 
 void driveChassis(int forRev, int turn, int slide)
 {
-  float forwardNormalized = (float)(forRev/255.f);
+  float forwardNormalized = (float)(forRev / 255.f);
 
   forwardNormalized = constrain( forwardNormalized, -1.f, 1.f );
   float multiplier = (ps2x.Button(PSB_L1) && ps2x.Button(PSB_R1)) ? 255.f : 80.f;
@@ -140,22 +156,22 @@ void driveChassis(int forRev, int turn, int slide)
   motorLR->speed(forward - ccwTurn - right);
   motorRR->speed(-(forward + ccwTurn + right));
 
-//  Serial.print(motorLF->getSpeed());
-//  Serial.print(',');
-//  Serial.print(motorRF->getSpeed());
-//  Serial.print(',');
-//  Serial.print(motorLR->getSpeed());
-//  Serial.print(',');
-//  Serial.print(motorRR->getSpeed());
-//  Serial.println();
+  //  Serial.print(motorLF->getSpeed());
+  //  Serial.print(',');
+  //  Serial.print(motorRF->getSpeed());
+  //  Serial.print(',');
+  //  Serial.print(motorLR->getSpeed());
+  //  Serial.print(',');
+  //  Serial.print(motorRR->getSpeed());
+  //  Serial.println();
 
 
-  
+
 }
 
 void setupController()
 {
-  
+
   //setup pins and settings: GamePad(clock, command, attention, data, Pressures?, Rumble?) check for error
   error = ps2x.config_gamepad(PS2_CLK, PS2_CMD, PS2_SEL, PS2_DAT, pressures, rumble);
 
