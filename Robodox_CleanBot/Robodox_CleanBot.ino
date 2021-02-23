@@ -30,43 +30,9 @@ void setup()
 {
   Serial.begin(9600);
   delay(300) ;//added delay to give wireless ps2 module some time to startup, before configuring it
+  setupController();
 
-  //setup pins and settings: GamePad(clock, command, attention, data, Pressures?, Rumble?) check for error
-  error = ps2x.config_gamepad(PS2_CLK, PS2_CMD, PS2_SEL, PS2_DAT, pressures, rumble);
-
-  if (error == 0) {
-    Serial.println("Found Controller, configuration successful ");
-    Serial.println();
-    Serial.println("Left analog stick for forward/back and turning.");
-    Serial.println("Right analog stick for sideways movement.");
-    Serial.println("Hold both L1 and R1 for full-speed.");
-  }
-  else if (error == 1)
-  {
-    Serial.println("No controller found, check PS2 receiver is inserted the correct way around.");
-    resetFunc();
-  }
-  else if (error == 2)
-    Serial.println("Controller found but not accepting commands.");
-
-  else if (error == 3)
-    Serial.println("Controller refusing to enter Pressures mode, may not support it. ");
-
-  type = ps2x.readType();
-  switch (type) {
-    case 0:
-      Serial.println("Unknown Controller type found ");
-      break;
-    case 1:
-      Serial.println("DualShock Controller found ");
-      break;
-    case 2:
-      Serial.println("GuitarHero Controller found ");
-      break;
-    case 3:
-      Serial.println("Wireless Sony DualShock Controller found ");
-      break;
-  }
+  driveChassis(0,0,0); 
 }
 
 int competitionMode = COMPMODE_STANDBY;
@@ -185,4 +151,45 @@ void driveChassis(int forRev, int turn, int slide)
 
 
   
+}
+
+void setupController()
+{
+  
+  //setup pins and settings: GamePad(clock, command, attention, data, Pressures?, Rumble?) check for error
+  error = ps2x.config_gamepad(PS2_CLK, PS2_CMD, PS2_SEL, PS2_DAT, pressures, rumble);
+
+  if (error == 0) {
+    Serial.println("Found Controller, configuration successful ");
+    Serial.println();
+    Serial.println("Left analog stick for forward/back and turning.");
+    Serial.println("Right analog stick for sideways movement.");
+    Serial.println("Hold both L1 and R1 for full-speed.");
+  }
+  else if (error == 1)
+  {
+    Serial.println("No controller found, check PS2 receiver is inserted the correct way around.");
+    resetFunc();
+  }
+  else if (error == 2)
+    Serial.println("Controller found but not accepting commands.");
+
+  else if (error == 3)
+    Serial.println("Controller refusing to enter Pressures mode, may not support it. ");
+
+  type = ps2x.readType();
+  switch (type) {
+    case 0:
+      Serial.println("Unknown Controller type found ");
+      break;
+    case 1:
+      Serial.println("DualShock Controller found ");
+      break;
+    case 2:
+      Serial.println("GuitarHero Controller found ");
+      break;
+    case 3:
+      Serial.println("Wireless Sony DualShock Controller found ");
+      break;
+  }
 }
