@@ -1,0 +1,26 @@
+1) Install Encoder Library
+	- Tools/Manage Libraries
+	- Wait for the list to update
+	- Type "Encoder" into the "Filter your search..." box
+	- Wait a few seconds for the list to update
+	- Scroll to the library called "Encoder" by Paul Stoffregen
+	- Install the latest version listed
+
+2) Install the PS2X Library
+	- Sketch/Include Library/Include Library/Add .zip Library
+	- Navigate to your Arduino code libary (where the .ino file is)
+	- Choose the PS2X_lib.zip file
+
+3) Plug in the Arduino to a USB port
+
+4) Go to Tools/Board and choose "Arduino Mega or Mega 2560"
+
+5) Go to Tools/Port and choose the COM port for the Arduino
+	- If you see multiple ports and do not know which one is for the Arduino, unplug the Arduino, and go back to Tools/Port and see which port disappeared - that's the one.  OR, plug in the Arduino and see which on appears.
+
+6) Click the Check-mark icon on the upper-left.
+	- The program will compile and if successful, everything will be green with no orange error messages
+
+7) Once you've successfully compiled the program, click the Right-arrow icon to upload the program to the Arduino.
+
+

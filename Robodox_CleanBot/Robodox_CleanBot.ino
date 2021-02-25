@@ -16,8 +16,8 @@ PS2X ps2x; // create PS2 Controller Class
 #define COMPMODE_AUTO 1
 #define COMPMODE_TELEOP 2
 
-#define TIMER_AUTONOMOUS_MS 5000
-#define TIMER_TELEOP_MS 10000
+#define TIMER_AUTONOMOUS_MS 1000
+#define TIMER_TELEOP_MS 100000
 
 int error = 0;
 byte type = 0;
@@ -105,10 +105,11 @@ void doTeleopLoop()
 
   if (ps2x.Button(PSB_L1) || ps2x.Button(PSB_R1))
   {
-    int LY = ps2x.Analog(PSS_LY);
+    int LY = 255 - ps2x.Analog(PSS_LY);
     int LX = ps2x.Analog(PSS_LX);
     int RX = ps2x.Analog(PSS_RX);
 
+    Serial.println(LY);
     driveChassisJoystick(LY, LX, RX);
   }
 }
@@ -133,7 +134,6 @@ void driveChassisJoystick(int forRev, int turn, int slide)
 {
   driveChassis((forRev * 2) - 255, (turn * 2) - 255, (slide * 2) - 255);
 }
-
 
 void driveChassis(int forRev, int turn, int slide)
 {
