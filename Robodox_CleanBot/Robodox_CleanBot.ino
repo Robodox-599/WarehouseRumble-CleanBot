@@ -16,8 +16,18 @@ PS2X ps2x; // create PS2 Controller Class
 #define COMPMODE_AUTO 1
 #define COMPMODE_TELEOP 2
 
-#define TIMER_AUTONOMOUS_MS 1000
-#define TIMER_TELEOP_MS 100000
+#define AUTOMODE_INIT 0
+#define AUTOMODE_FORWARD 1
+#define AUTOMODE_TURNLEFT 2
+#define AUTOMODE_REVERSE 3
+#define AUTOMODE_STOP 4
+#define AUTOMODE_STANDBY 1000
+
+#define TIMER_AUTONOMOUS_MS 15000
+#define TIMER_TELEOP_MS 15000
+
+#define ELEVATOR_UP_BUTTON PSB_PAD_UP
+#define ELEVATOR_DOWN_BUTTON PSB_PAD_DOWN
 
 int error = 0;
 byte type = 0;
@@ -35,7 +45,7 @@ void setup()
   delay(300) ;//added delay to give wireless ps2 module some time to startup, before configuring it
   setupController();
 
-  driveChassis(0, 0, 0);
+  allStop();
 
   Serial.println("Going to Standby Mode");
 }
@@ -50,7 +60,7 @@ void loop() {
     case COMPMODE_STANDBY:
       ps2x.read_gamepad();
 
-      if (ps2x.Button(PSB_START)) 
+      if (ps2x.ButtonPressed(PSB_START))
       {
         Serial.println("Going to Auto Mode");
         competitionMode = COMPMODE_AUTO;
@@ -63,6 +73,7 @@ void loop() {
 
       if (millis() > (timerStart + TIMER_AUTONOMOUS_MS)) {
         Serial.println("Going to Teleop Mode");
+        allStop();
         competitionMode = COMPMODE_TELEOP;
         timerStart = millis();
       }
@@ -73,6 +84,7 @@ void loop() {
 
       if (millis() > (timerStart + TIMER_TELEOP_MS)) {
         Serial.println("Match over, going to Standby");
+        allStop();
         competitionMode = COMPMODE_STANDBY;
       }
       break;
@@ -93,50 +105,90 @@ void doTeleopLoop()
   // We have a DualShock Controller that is responding
   ps2x.read_gamepad(); //read controller and set no vibrate
 
-  // Test Encoders
-  //  Serial.print(motorLF->getEncoderPosition());
-  //  Serial.print(", ");
-  //  Serial.print(motorRF->getEncoderPosition());
-  //  Serial.print(", ");
-  //  Serial.print(motorLR->getEncoderPosition());
-  //  Serial.print(", ");
-  //  Serial.print(motorRR->getEncoderPosition());
-  //  Serial.println();
-
   if (ps2x.Button(PSB_L1) || ps2x.Button(PSB_R1))
   {
     int LY = 255 - ps2x.Analog(PSS_LY);
     int LX = ps2x.Analog(PSS_LX);
     int RX = ps2x.Analog(PSS_RX);
 
-    Serial.println(LY);
     driveChassisJoystick(LY, LX, RX);
+  }
+  else
+  {
+    driveChassis(0,0,0);
   }
 }
 
 void doAutonomousLoop()
 {
-//  driveChassis(0, 0, 255);
-//  delay(5000);
-//
-//  driveChassis(0, 0, 0);
-//  delay(2000);
-//
-//  driveChassis(0, 0, -255);
-//  delay(5000);
-//
-//  driveChassis(0, 0, 0);
-//  delay(2000);
+    //Serial.print('*');
+    static int stateLoopCount = 0;
+    static int autoState = AUTOMODE_INIT;
 
+    stateLoopCount++;
+
+    switch(autoState)
+    {
+      case AUTOMODE_INIT:
+        // All the setup stuff if we want
+      
+        autoState = AUTOMODE_FORWARD;
+        stateLoopCount = 0;
+        break;
+      case AUTOMODE_FORWARD:
+        static long encoderBookMark = 0;
+        if(stateLoopCount == 1)
+        {
+          encoderBookMark = motorLF->getEncoderPosition();
+          driveChassis(200, 0, 0);
+        }
+
+        Serial.print(encoderBookMark);
+        Serial.print(',');
+        Serial.print(motorLF->getEncoderPosition());
+        Serial.print(',');
+        Serial.print(abs(motorLF->getEncoderPosition() - encoderBookMark));
+        Serial.println();
+        
+        if(abs(motorLF->getEncoderPosition() - encoderBookMark) > 1300)
+        {
+          Serial.println("DONE");
+          driveChassis(0,0,0);
+          autoState = AUTOMODE_STANDBY;
+          stateLoopCount = 0;
+        }
+      break;
+
+
+      case AUTOMODE_STANDBY:
+        //Serial.print('-');
+        // Nothing!
+      break;
+      
+    }
 }
 
 void driveChassisJoystick(int forRev, int turn, int slide)
 {
+  Serial.print("J: ");
+  Serial.print(forRev);
+  Serial.print(',');
+  Serial.print(turn);
+  Serial.print(',');
+  Serial.print(slide);
+  Serial.println();
   driveChassis((forRev * 2) - 255, (turn * 2) - 255, (slide * 2) - 255);
 }
 
 void driveChassis(int forRev, int turn, int slide)
 {
+  Serial.print("DC:");
+  Serial.print(forRev);
+  Serial.print(',');
+  Serial.print(turn);
+  Serial.print(',');
+  Serial.print(slide);
+  Serial.println();
   float forwardNormalized = (float)(forRev / 255.f);
 
   forwardNormalized = constrain( forwardNormalized, -1.f, 1.f );
@@ -153,8 +205,8 @@ void driveChassis(int forRev, int turn, int slide)
 
   motorLF->speed(forward + ccwTurn - right);
   motorRF->speed(forward - ccwTurn + right);
-  motorLR->speed(forward - ccwTurn - right);
-  motorRR->speed(-(forward + ccwTurn + right));
+  motorLR->speed(forward + ccwTurn + right);
+  motorRR->speed(-(forward - ccwTurn - right));
 
   //  Serial.print(motorLF->getSpeed());
   //  Serial.print(',');
@@ -164,14 +216,11 @@ void driveChassis(int forRev, int turn, int slide)
   //  Serial.print(',');
   //  Serial.print(motorRR->getSpeed());
   //  Serial.println();
-
-
-
 }
 
 void setupController()
 {
-
+  
   //setup pins and settings: GamePad(clock, command, attention, data, Pressures?, Rumble?) check for error
   error = ps2x.config_gamepad(PS2_CLK, PS2_CMD, PS2_SEL, PS2_DAT, pressures, rumble);
 
@@ -208,4 +257,12 @@ void setupController()
       Serial.println("Wireless Sony DualShock Controller found ");
       break;
   }
+}
+
+void allStop()
+{
+  driveChassis(0,0,0);
+  //arm.stop
+  //gripper.stop
+  //wrist.stop
 }
