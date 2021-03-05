@@ -24,7 +24,7 @@ PS2X ps2x; // create PS2 Controller Class
 #define AUTOMODE_STANDBY 1000
 
 #define TIMER_AUTONOMOUS_MS 15000
-#define TIMER_TELEOP_MS 15000
+#define TIMER_TELEOP_MS 5000
 
 #define ELEVATOR_UP_BUTTON PSB_PAD_UP
 #define ELEVATOR_DOWN_BUTTON PSB_PAD_DOWN
@@ -105,6 +105,13 @@ void doTeleopLoop()
   // We have a DualShock Controller that is responding
   ps2x.read_gamepad(); //read controller and set no vibrate
 
+  // SAMPLE CODE FOR USING TWO BUTTONS TO CONTROL A MOTOR
+  //  if(ps2x.Button(ELEVATOR_UP_BUTTON) && ps2x.Button(ELEVATOR_DOWN_BUTTON)) {motorLF->speed(0);}
+  //  if(ps2x.Button(ELEVATOR_UP_BUTTON) && !ps2x.Button(ELEVATOR_DOWN_BUTTON)) {motorLF->speed(255);}
+  //  if(!ps2x.Button(ELEVATOR_UP_BUTTON) && ps2x.Button(ELEVATOR_DOWN_BUTTON)) {motorLF->speed(-255);}
+  //  if(!ps2x.Button(ELEVATOR_UP_BUTTON) && !ps2x.Button(ELEVATOR_DOWN_BUTTON)) {motorLF->speed(0);}
+
+  // DRIVING
   if (ps2x.Button(PSB_L1) || ps2x.Button(PSB_R1))
   {
     int LY = 255 - ps2x.Analog(PSS_LY);
@@ -115,57 +122,67 @@ void doTeleopLoop()
   }
   else
   {
-    driveChassis(0,0,0);
+    driveChassis(0, 0, 0);
   }
 }
 
 void doAutonomousLoop()
 {
-    //Serial.print('*');
-    static int stateLoopCount = 0;
-    static int autoState = AUTOMODE_INIT;
+  //Serial.print('*');
+  static int stateLoopCount = 0;
+  static int autoState = AUTOMODE_INIT;
+  static long encoderBookMark = 0;
 
-    stateLoopCount++;
+  stateLoopCount++;
 
-    switch(autoState)
-    {
-      case AUTOMODE_INIT:
-        // All the setup stuff if we want
-      
-        autoState = AUTOMODE_FORWARD;
+  // Autonomous Mode State Machine!!!1!11!!!
+  switch (autoState)
+  {
+    case AUTOMODE_INIT:
+      // All the setup stuff if we want
+
+      autoState = AUTOMODE_FORWARD;
+      stateLoopCount = 0;
+      break;
+    case AUTOMODE_FORWARD:
+      if (stateLoopCount == 1)
+      {
+        Serial.println("AUTOMODE_FORWARD");
+        encoderBookMark = motorLF->getEncoderPosition();
+        driveChassis(200, 0, 0);
+      }
+
+      if (abs(motorLF->getEncoderPosition() - encoderBookMark) > 1300)
+      {
+        Serial.println("DONE");
+        driveChassis(0, 0, 0);
+        autoState = AUTOMODE_TURNLEFT;
         stateLoopCount = 0;
-        break;
-      case AUTOMODE_FORWARD:
-        static long encoderBookMark = 0;
-        if(stateLoopCount == 1)
-        {
-          encoderBookMark = motorLF->getEncoderPosition();
-          driveChassis(200, 0, 0);
-        }
+      }
+      break;
+    case AUTOMODE_TURNLEFT:
+      if (stateLoopCount == 1)
+      {
+        Serial.println("AUTOMODE_TURNLEFT");
+        encoderBookMark = motorLF->getEncoderPosition();
+        driveChassis(0, -200, 0);
+      }
 
-        Serial.print(encoderBookMark);
-        Serial.print(',');
-        Serial.print(motorLF->getEncoderPosition());
-        Serial.print(',');
-        Serial.print(abs(motorLF->getEncoderPosition() - encoderBookMark));
-        Serial.println();
-        
-        if(abs(motorLF->getEncoderPosition() - encoderBookMark) > 1300)
-        {
-          Serial.println("DONE");
-          driveChassis(0,0,0);
-          autoState = AUTOMODE_STANDBY;
-          stateLoopCount = 0;
-        }
+      if (abs(motorLF->getEncoderPosition() - encoderBookMark) > 1300)
+      {
+        Serial.println("DONE");
+        driveChassis(0, 0, 0);
+        autoState = AUTOMODE_STANDBY;
+        stateLoopCount = 0;
+      }
+
       break;
 
-
-      case AUTOMODE_STANDBY:
-        //Serial.print('-');
-        // Nothing!
+    case AUTOMODE_STANDBY:
+      //Serial.print('-');
+      // Nothing!
       break;
-      
-    }
+  }
 }
 
 void driveChassisJoystick(int forRev, int turn, int slide)
@@ -182,13 +199,6 @@ void driveChassisJoystick(int forRev, int turn, int slide)
 
 void driveChassis(int forRev, int turn, int slide)
 {
-  Serial.print("DC:");
-  Serial.print(forRev);
-  Serial.print(',');
-  Serial.print(turn);
-  Serial.print(',');
-  Serial.print(slide);
-  Serial.println();
   float forwardNormalized = (float)(forRev / 255.f);
 
   forwardNormalized = constrain( forwardNormalized, -1.f, 1.f );
@@ -207,20 +217,11 @@ void driveChassis(int forRev, int turn, int slide)
   motorRF->speed(forward - ccwTurn + right);
   motorLR->speed(forward + ccwTurn + right);
   motorRR->speed(-(forward - ccwTurn - right));
-
-  //  Serial.print(motorLF->getSpeed());
-  //  Serial.print(',');
-  //  Serial.print(motorRF->getSpeed());
-  //  Serial.print(',');
-  //  Serial.print(motorLR->getSpeed());
-  //  Serial.print(',');
-  //  Serial.print(motorRR->getSpeed());
-  //  Serial.println();
 }
 
 void setupController()
 {
-  
+
   //setup pins and settings: GamePad(clock, command, attention, data, Pressures?, Rumble?) check for error
   error = ps2x.config_gamepad(PS2_CLK, PS2_CMD, PS2_SEL, PS2_DAT, pressures, rumble);
 
@@ -261,7 +262,7 @@ void setupController()
 
 void allStop()
 {
-  driveChassis(0,0,0);
+  driveChassis(0, 0, 0);
   //arm.stop
   //gripper.stop
   //wrist.stop
