@@ -179,6 +179,7 @@ void doAutonomousLoop()
       break;
 
     case AUTOMODE_STANDBY:
+      allStop();
       //Serial.print('-');
       // Nothing!
       break;
