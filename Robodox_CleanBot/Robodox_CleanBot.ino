@@ -31,6 +31,7 @@ PS2X ps2x; // create PS2 Controller Class
 
 int error = 0;
 byte type = 0;
+int autoState = AUTOMODE_INIT;
 
 void (* resetFunc) (void) = 0;
 
@@ -64,6 +65,7 @@ void loop() {
       {
         Serial.println("Going to Auto Mode");
         competitionMode = COMPMODE_AUTO;
+        autoState = AUTOMODE_INIT;
         timerStart = millis();
       }
       break;
@@ -130,7 +132,6 @@ void doAutonomousLoop()
 {
   //Serial.print('*');
   static int stateLoopCount = 0;
-  static int autoState = AUTOMODE_INIT;
   static long encoderBookMark = 0;
 
   stateLoopCount++;
@@ -143,7 +144,7 @@ void doAutonomousLoop()
 
 //      autoState = AUTOMODE_FORWARD;
 //      stateLoopCount = 0;
-        setNewState(autoState, AUTOMODE_FORWARD, stateLoopCount);
+        setNewState(AUTOMODE_FORWARD, stateLoopCount);
       break;
     case AUTOMODE_FORWARD:
       if (stateLoopCount == 1)
@@ -159,7 +160,7 @@ void doAutonomousLoop()
         driveChassis(0, 0, 0);
 //        autoState = AUTOMODE_TURNLEFT;
 //        stateLoopCount = 0;
-        setNewState(autoState, AUTOMODE_TURNLEFT, stateLoopCount);
+        setNewState(AUTOMODE_TURNLEFT, stateLoopCount);
       }
       break;
     case AUTOMODE_TURNLEFT:
@@ -176,7 +177,7 @@ void doAutonomousLoop()
         driveChassis(0, 0, 0);
 //        autoState = AUTOMODE_STANDBY;
 //        stateLoopCount = 0;
-        setNewState(autoState, AUTOMODE_STANDBY, stateLoopCount);
+        setNewState(AUTOMODE_STANDBY, stateLoopCount);
       }
 
       break;
@@ -272,7 +273,7 @@ void allStop()
   //wrist.stop
 }
 
-void setNewState(int& autoState, int newState, int& stateLoopCount)
+void setNewState(int newState, int& stateLoopCount)
 {
   autoState = newState;
   stateLoopCount = 0;
