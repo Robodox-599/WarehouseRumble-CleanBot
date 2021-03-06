@@ -141,8 +141,9 @@ void doAutonomousLoop()
     case AUTOMODE_INIT:
       // All the setup stuff if we want
 
-      autoState = AUTOMODE_FORWARD;
-      stateLoopCount = 0;
+//      autoState = AUTOMODE_FORWARD;
+//      stateLoopCount = 0;
+        setNewState(autoState, AUTOMODE_FORWARD, stateLoopCount);
       break;
     case AUTOMODE_FORWARD:
       if (stateLoopCount == 1)
@@ -156,8 +157,9 @@ void doAutonomousLoop()
       {
         Serial.println("DONE");
         driveChassis(0, 0, 0);
-        autoState = AUTOMODE_TURNLEFT;
-        stateLoopCount = 0;
+//        autoState = AUTOMODE_TURNLEFT;
+//        stateLoopCount = 0;
+        setNewState(autoState, AUTOMODE_TURNLEFT, stateLoopCount);
       }
       break;
     case AUTOMODE_TURNLEFT:
@@ -172,8 +174,9 @@ void doAutonomousLoop()
       {
         Serial.println("DONE");
         driveChassis(0, 0, 0);
-        autoState = AUTOMODE_STANDBY;
-        stateLoopCount = 0;
+//        autoState = AUTOMODE_STANDBY;
+//        stateLoopCount = 0;
+        setNewState(autoState, AUTOMODE_STANDBY, stateLoopCount);
       }
 
       break;
@@ -267,4 +270,10 @@ void allStop()
   //arm.stop
   //gripper.stop
   //wrist.stop
+}
+
+void setNewState(int& autoState, int newState, int& stateLoopCount)
+{
+  autoState = newState;
+  stateLoopCount = 0;
 }
