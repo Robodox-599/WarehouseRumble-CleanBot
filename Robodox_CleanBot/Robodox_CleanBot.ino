@@ -1,6 +1,7 @@
 #include <Encoder.h>
 #include <PS2X_lib.h>
 #include "SPDMotor.h"
+#include <Servo.h> 
 
 //PS2
 #define PS2_DAT        52  //14    
@@ -23,8 +24,8 @@ PS2X ps2x; // create PS2 Controller Class
 #define AUTOMODE_STOP 4
 #define AUTOMODE_STANDBY 1000
 
-#define TIMER_AUTONOMOUS_MS 15000
-#define TIMER_TELEOP_MS 5000
+#define TIMER_AUTONOMOUS_MS 2000
+#define TIMER_TELEOP_MS 60000
 
 #define ELEVATOR_UP_BUTTON PSB_PAD_UP
 #define ELEVATOR_DOWN_BUTTON PSB_PAD_DOWN
@@ -40,11 +41,16 @@ SPDMotor *motorRF = new SPDMotor(19, 38, false, 8, 36, 37); // <- NOTE: Motor Di
 SPDMotor *motorLR = new SPDMotor(3, 49, true,  9, 43, 42); // <- Encoder reversed to make +position measurement be forward.
 SPDMotor *motorRR = new SPDMotor(2, A1, false, 5, A4, A5); // <- NOTE: Motor Dir pins reversed for opposite operation
 
+Servo demoServo;
+
 void setup()
 {
   Serial.begin(57600);
   delay(300) ;//added delay to give wireless ps2 module some time to startup, before configuring it
   setupController();
+
+  demoServo.attach(46);
+  demoServo.write(90);
 
   allStop();
 
@@ -95,6 +101,9 @@ void loop() {
   delay(20);
 }
 
+int armPosition = 0;
+int wristTargetPosition = 0;
+
 void doTeleopLoop()
 {
   if (error == 1) {
@@ -113,6 +122,41 @@ void doTeleopLoop()
   //  if(!ps2x.Button(ELEVATOR_UP_BUTTON) && ps2x.Button(ELEVATOR_DOWN_BUTTON)) {motorLF->speed(-255);}
   //  if(!ps2x.Button(ELEVATOR_UP_BUTTON) && !ps2x.Button(ELEVATOR_DOWN_BUTTON)) {motorLF->speed(0);}
 
+/*
+    //ServoSample
+    if(ps2x.Button(PSB_PAD_LEFT)) { armPosition = 0; }
+    if(ps2x.Button(PSB_PAD_RIGHT)) { armPosition = 180; }
+
+    if(ps2x.ButtonPressed(PSB_PAD_UP)) { armPosition += 20; }
+    if(ps2x.ButtonPressed(PSB_PAD_DOWN)) { armPosition -= 20; }
+    if(armPosition > 180) { armPosition = 180;}
+    if(armPosition < 0) { armPosition = 0;}
+
+    demoServo.write(armPosition);
+
+    
+    // WRIST CONTROL EXAMPLE
+    // Controls
+    if(ps2x.Button(PSB_TRIANGLE)) { wristTargetPosition++; }
+    if(ps2x.Button(PSB_CROSS)) { wristTargetPosition--; }
+
+    if(ps2x.Button(PSB_SQUARE)) { wristTargetPosition = 25; }
+    if(ps2x.Button(PSB_CIRCLE)) { wristTargetPosition = 500; }
+
+    // Motor
+    if(wristTargetPosition > 500) {wristTargetPosition = 500;}
+    if(wristTargetPosition < 25) {wristTargetPosition = 25;}
+    
+    int wristActualPosition = analogRead(25);
+    int wristMotorSpeed = 0;
+
+    if(wristActualPosition > wristTargetPosition) { wristMotorSpeed = 100;  }
+    if(wristActualPosition < wristTargetPosition) { wristMotorSpeed = -100;  }
+    if(wristActualPosition == wristTargetPosition) { wristMotorSpeed = 0;  }
+
+    armMotor->speed(wristMotorSpeed);
+  */
+  
   // DRIVING
   if (ps2x.Button(PSB_L1) || ps2x.Button(PSB_R1))
   {
@@ -192,13 +236,6 @@ void doAutonomousLoop()
 
 void driveChassisJoystick(int forRev, int turn, int slide)
 {
-  Serial.print("J: ");
-  Serial.print(forRev);
-  Serial.print(',');
-  Serial.print(turn);
-  Serial.print(',');
-  Serial.print(slide);
-  Serial.println();
   driveChassis((forRev * 2) - 255, (turn * 2) - 255, (slide * 2) - 255);
 }
 
