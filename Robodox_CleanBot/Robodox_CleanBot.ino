@@ -24,7 +24,7 @@ PS2X ps2x; // create PS2 Controller Class
 #define AUTOMODE_STOP 4
 #define AUTOMODE_STANDBY 1000
 
-#define TIMER_AUTONOMOUS_MS 2000
+#define TIMER_AUTONOMOUS_MS 15000
 #define TIMER_TELEOP_MS 60000
 
 #define ELEVATOR_UP_BUTTON PSB_PAD_UP
@@ -61,19 +61,42 @@ int competitionMode = COMPMODE_STANDBY;
 unsigned long timerStart = millis();
 
 void loop() {
+  static byte startButtonCount = 0;
 
+  if (error == 1) {
+    return;  //skip loop if no controller found
+  }
+  if (type == 2) {
+    return;  //Guitar Hero Controller
+  }
+
+  // We have a DualShock Controller that is responding
+  ps2x.read_gamepad(); //read controller and set no vibrate
+
+  // Use the SELECT button to stop everything and stop the program by going into an infinite loop
+  if(ps2x.Button(PSB_SELECT)) { allStop(); while(1){ ; } }
+
+  // Game Mode State Machine
   switch (competitionMode)
   {
     case COMPMODE_STANDBY:
-      ps2x.read_gamepad();
-
-      if (ps2x.ButtonPressed(PSB_START))
+      if (ps2x.Button(PSB_START))
       {
-        Serial.println("Going to Auto Mode");
-        competitionMode = COMPMODE_AUTO;
-        autoState = AUTOMODE_INIT;
-        timerStart = millis();
+        startButtonCount++;
+
+        if(startButtonCount > 3)
+        {
+          Serial.println("Going to Auto Mode");
+          competitionMode = COMPMODE_AUTO;
+          autoState = AUTOMODE_INIT;
+          timerStart = millis();
+        }
       }
+      else
+      {
+        startButtonCount = 0;
+      }
+      
       break;
 
     case COMPMODE_AUTO:
@@ -106,16 +129,14 @@ int wristTargetPosition = 0;
 
 void doTeleopLoop()
 {
-  if (error == 1) {
-    return;  //skip loop if no controller found
-  }
-  if (type == 2) {
-    return;  //Guitar Hero Controller
-  }
+  static boolean PSB_PAD_UP_OLD = false;
 
-  // We have a DualShock Controller that is responding
-  ps2x.read_gamepad(); //read controller and set no vibrate
+  // Detect a button press using the workaround
+  if(ps2x.Button(PSB_PAD_UP) && !PSB_PAD_UP_OLD){ Serial.println("PSB PAD UP PRESS!"); }
 
+  // Detect a button relear using the workaround
+  if(!ps2x.Button(PSB_PAD_UP) && PSB_PAD_UP_OLD){ Serial.println("PSB PAD UP RELEASE!"); }
+  
   // SAMPLE CODE FOR USING TWO BUTTONS TO CONTROL A MOTOR
   //  if(ps2x.Button(ELEVATOR_UP_BUTTON) && ps2x.Button(ELEVATOR_DOWN_BUTTON)) {motorLF->speed(0);}
   //  if(ps2x.Button(ELEVATOR_UP_BUTTON) && !ps2x.Button(ELEVATOR_DOWN_BUTTON)) {motorLF->speed(255);}
@@ -158,23 +179,18 @@ void doTeleopLoop()
   */
   
   // DRIVING
-  if (ps2x.Button(PSB_L1) || ps2x.Button(PSB_R1))
-  {
-    int LY = 255 - ps2x.Analog(PSS_LY);
-    int LX = ps2x.Analog(PSS_LX);
-    int RX = ps2x.Analog(PSS_RX);
+  int LY = 255 - ps2x.Analog(PSS_LY);
+  int LX = ps2x.Analog(PSS_LX);
+  int RX = ps2x.Analog(PSS_RX);
 
-    driveChassisJoystick(LY, LX, RX);
-  }
-  else
-  {
-    driveChassis(0, 0, 0);
-  }
+  driveChassisJoystick(LY, LX, RX);
+
+  // Record our button values for the next loop so we can detect a button press event
+  PSB_PAD_UP_OLD = ps2x.Button(PSB_PAD_UP);
 }
 
 void doAutonomousLoop()
 {
-  //Serial.print('*');
   static int stateLoopCount = 0;
   static long encoderBookMark = 0;
 
@@ -185,9 +201,6 @@ void doAutonomousLoop()
   {
     case AUTOMODE_INIT:
       // All the setup stuff if we want
-
-//      autoState = AUTOMODE_FORWARD;
-//      stateLoopCount = 0;
         setNewState(AUTOMODE_FORWARD, stateLoopCount);
       break;
     case AUTOMODE_FORWARD:
@@ -202,8 +215,6 @@ void doAutonomousLoop()
       {
         Serial.println("DONE");
         driveChassis(0, 0, 0);
-//        autoState = AUTOMODE_TURNLEFT;
-//        stateLoopCount = 0;
         setNewState(AUTOMODE_TURNLEFT, stateLoopCount);
       }
       break;
@@ -219,8 +230,6 @@ void doAutonomousLoop()
       {
         Serial.println("DONE");
         driveChassis(0, 0, 0);
-//        autoState = AUTOMODE_STANDBY;
-//        stateLoopCount = 0;
         setNewState(AUTOMODE_STANDBY, stateLoopCount);
       }
 
@@ -228,8 +237,7 @@ void doAutonomousLoop()
 
     case AUTOMODE_STANDBY:
       allStop();
-      //Serial.print('-');
-      // Nothing!
+      // Do Nothing!
       break;
   }
 }
@@ -244,7 +252,7 @@ void driveChassis(int forRev, int turn, int slide)
   float forwardNormalized = (float)(forRev / 255.f);
 
   forwardNormalized = constrain( forwardNormalized, -1.f, 1.f );
-  float multiplier = (ps2x.Button(PSB_L1) && ps2x.Button(PSB_R1)) ? 255.f : 80.f;
+  float multiplier = 255.f;
   int forward = (int)(pow(forwardNormalized, 2.0) * multiplier);
 
   // Preserve the direction of movement.
@@ -258,7 +266,7 @@ void driveChassis(int forRev, int turn, int slide)
   motorLF->speed(forward + ccwTurn - right);
   motorRF->speed(forward - ccwTurn + right);
   motorLR->speed(forward + ccwTurn + right);
-  motorRR->speed(-(forward - ccwTurn - right));
+  motorRR->speed(-(forward - ccwTurn - right)); // The chassis this was developed on ran one wheel backwards from the others
 }
 
 void setupController()
